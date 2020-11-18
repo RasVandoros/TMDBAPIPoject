@@ -41,49 +41,53 @@ namespace ConsoleApp2
                 int totalPages = 0;
                 dynamic data = null;
                 string getCredits_API_call = "";
+                bool success = false;
                 do
                 {
-                    try
+                    data = await GetRequestAsync($"{discover_API_call}&page={pageNo}");
+                    foreach (var member in data["results"])
                     {
-                        data = await GetRequestAsync($"{discover_API_call}&page={pageNo}");
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                    try
-                    {
-                        foreach (var member in data["results"])
+                        string movieId = member["id"].ToString();
+                        success = Manager.Instance.InsertMovie(movieId, member["title"], member["overview"], member["original_title"], member["release_date"]);
+                        if (!success) continue;
+                        //Make another API call here for crew members, from movie id
+                        action = "/movie/";
+
+                        getCredits_API_call = $"{ api_base_url }{ action }{ movieId }/credits?api_key={api_key}&language={language_code}";
+                        dynamic creditsDataset = await GetRequestAsync(getCredits_API_call);
+
+                        foreach (var creditMember in creditsDataset["crew"])
                         {
-                            string movieId = member["id"].ToString();
-                            Manager.Instance.InsertMovie(movieId, member["title"], member["overview"], member["original_title"], member["release_date"]);
-                            //Make another API call here for crew members, from movie id
-                            action = "/movie/";
-                            getCredits_API_call = $"{ api_base_url }{ action }{ movieId }?api_key={api_key}&language={language_code}";
-                            dynamic creditsDataset = await GetRequestAsync(getCredits_API_call);
-                            foreach (var memeber in creditsDataset["crew"])
+                            if (creditMember["job"] == "Director")
                             {
-                                if (member["job"] == "Director")
+                                string directorName = creditMember["name"];
+                                string directorId = creditMember["id"].ToString();
+                                string directorImdb = "";
+
+                                //Call get external id api to get imdb_id of director
+                                string getExternalIdAPICall = $"{ api_base_url }/person/{ directorId }/external_ids?api_key={api_key}&language={language_code}";
+                                dynamic externalIdDataset = await GetRequestAsync(getExternalIdAPICall);
+                                string imdbId = externalIdDataset["imdb_id"];
+
+                                if (imdbId != null) //check if the director has an imdb page
                                 {
-                                    //Call get external id api to get imdb_id of director
-
-
-                                    //Insert director id, name, imdb_id in directors
-                                    //Insert director_id - movie_id in movies_directors
+                                    directorImdb = $"https://www.imdb.com/name/{ imdbId }";
                                 }
+                                else
+                                {
+                                    directorImdb = "Does not exist";
+                                }
+                                //Insert director id, name, imdb_id in directors
+                                success = Manager.Instance.InsertDirector(directorId, directorName, directorImdb);
+                                //Insert director_id - movie_id in movies_directors
+                                success = Manager.Instance.InsertDirectorToMovie(movieId, directorId);
+                                if (!success) continue;
                             }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
                     }
                     totalPages = Convert.ToInt32(data["total_pages"]);
                     pageNo++;
                 } while (pageNo < totalPages);
-
-
-
             }
 
             static async Task<dynamic> GetRequestAsync(string path)

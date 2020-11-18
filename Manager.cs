@@ -56,10 +56,11 @@ namespace ConsoleApp2
 
         #endregion
 
+        private static string connectionString = "Data Source = localhost; Initial Catalog = TMDBdb; Integrated Security = True";
 
-        public void InsertMovie(string id, string t, string o, string o_t, string r_d)
+        public bool InsertMovie(string id, string t, string o, string o_t, string r_d)
         {
-            string connectionString = "Data Source = localhost; Initial Catalog = TMDBdb; Integrated Security = True";
+            bool success = false;
             var myCommandString = "INSERT INTO Movies (movie_id, title, overview, original_title, release_date) VALUES (@id, @title, @overview, @original_title, @release_date)";
 
             using (var myConnection = new SqlConnection(connectionString))
@@ -75,12 +76,75 @@ namespace ConsoleApp2
                     myConnection.Open();
                     command.ExecuteNonQuery();
                     myConnection.Close();
+                    success = true;
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("Error inserting to movies table.");
+                    Console.WriteLine("Movie title: " + t + ". Movie id: " + id);
                     Console.WriteLine(e.Message);
+                    Console.WriteLine("Debug.");
                 }
             }
+            return success;
+        }
+
+
+        internal bool InsertDirector(string directorId, string name, string imdbId)
+        {
+            bool success = false;
+            var myCommandString = "IF NOT EXISTS (SELECT * FROM Directors WHERE director_id = @id ) INSERT INTO Directors (director_id, name, imdb_id) VALUES (@id, @name, @imdb)";
+
+            using (var myConnection = new SqlConnection(connectionString))
+            using (var command = new SqlCommand(myCommandString, myConnection))
+            {
+                command.Parameters.AddWithValue("@id", directorId);
+                command.Parameters.AddWithValue("@name", name);
+                command.Parameters.AddWithValue("@imdb", imdbId);
+                try
+                {
+                    myConnection.Open();
+                    command.ExecuteNonQuery();
+                    myConnection.Close();
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error inserting to directors table.");
+                    Console.WriteLine("Director name: " + name + ". Director id: " + directorId);
+                    Console.WriteLine(e.Message);
+                    Console.WriteLine("Debug.");
+                }
+            }
+            return success;
+        }
+
+        internal bool InsertDirectorToMovie(string movieId, string directorId)
+        {
+            bool success = false;
+            var myCommandString = "INSERT INTO movies_directors (movie_id, director_id) VALUES (@movie_id, @director_id)";
+
+            using (var myConnection = new SqlConnection(connectionString))
+            using (var command = new SqlCommand(myCommandString, myConnection))
+            {
+                command.Parameters.AddWithValue("@movie_id", movieId);
+                command.Parameters.AddWithValue("@director_id", directorId);
+                try
+                {
+                    myConnection.Open();
+                    command.ExecuteNonQuery();
+                    myConnection.Close();
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error inserting to movies_directors table.");
+                    Console.WriteLine("Movie id: " + movieId + ". Director id: " + directorId);
+                    Console.WriteLine(e.Message);
+                    Console.WriteLine("Debug.");
+                }
+            }
+            return success;
         }
     }
 }
