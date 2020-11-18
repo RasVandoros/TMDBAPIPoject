@@ -6,8 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Data.SqlClient;
 
-namespace HttpClientSample
+namespace ConsoleApp2
 {
     public class Movie
     {
@@ -28,12 +29,6 @@ namespace HttpClientSample
     {
         static HttpClient client = new HttpClient();
 
-        static void ShowProduct(Movie movie)
-        {
-            Console.WriteLine($"Title: {movie.Title}\tRelease Date: " +
-                $"{movie.Release_date}\tOverview: {movie.Overview}");
-        }
-
         static async Task<Data> GetMovieAsync(string path)
         {
             Data data = null;
@@ -45,9 +40,8 @@ namespace HttpClientSample
             return data;
         }
 
-        static async Task<Data> GetRecentMoviesAsync(string path)
+        static async void GetRecentMoviesAsync(string path)
         {
-            Data data = null;
             HttpResponseMessage response = await client.GetAsync(path);
             if (response.IsSuccessStatusCode)
             {
@@ -60,7 +54,7 @@ namespace HttpClientSample
                 long total_pages = d["total_pages"];
                 foreach (var member in d["results"])
                 {
-                    Console.WriteLine(member["title"]);
+                    Manager.Instance.InsertMovie(member["title"], member["overview"], member["original_title"], member["release_date"]);
                 }
                 for (int i = 2; i <= total_pages; i++)
                 {
@@ -68,21 +62,11 @@ namespace HttpClientSample
                     responseBody = await response.Content.ReadAsStringAsync();
                     d = js.Deserialize<dynamic>(responseBody);
                     foreach (var member in d["results"])
-                    {
-                        Console.WriteLine(member["title"]);
+                    {                        
+                        Manager.Instance.InsertMovie(member["title"], member["overview"], member["original_title"], member["release_date"]);
                     }
                 }
-;
-
-                //Object jObject = JObject.Parse(responseBody);
-
-                //JToken memberName = jObject["Results"][0];
-
-
-
             }
-            Console.ReadLine();
-            return data;
         }
 
         static void Main()
@@ -110,17 +94,13 @@ namespace HttpClientSample
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             try
             {
-                //string url = "https://api.themoviedb.org/3/movie/738646?api_key=26b0924beb1a602a494bf23da021b807&language=en-US";
-                // Get the movie
-                //Movie movie = await GetMovieAsync(url);
-                Data data = await GetRecentMoviesAsync(endpoint);
-                //ShowProduct(movie);
+                
+                GetRecentMoviesAsync(endpoint);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
-            Console.ReadLine();
         }
     }
 }
