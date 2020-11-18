@@ -12,7 +12,6 @@ namespace ConsoleApp2
         static Manager instance = null;
         static readonly object myLock = new object();
         private int id;
-
         Manager()
         {
             try
@@ -33,8 +32,6 @@ namespace ConsoleApp2
             }
         }
 
-        
-
         public static Manager Instance
         {
             get
@@ -49,10 +46,9 @@ namespace ConsoleApp2
                 return instance;
             }
         }
-
         #endregion
 
-        private static string connectionString = "Data Source = localhost; Initial Catalog = TMDBdb; Integrated Security = True";
+        private static string connectionString = "Data Source=192.168.1.18,1433;Initial Catalog=TMDBdb;Persist Security Info=True;User ID=user1234;Password=1234";
 
         internal void DeleteExistingMovies()
         {
@@ -78,7 +74,6 @@ namespace ConsoleApp2
                 myConnection.Close();
             }
         }
-
         internal void DeleteExistingMovToDir()
         {
             var myCommandString = "DELETE FROM Movies_Directors";
@@ -91,16 +86,13 @@ namespace ConsoleApp2
                 myConnection.Close();
             }
         }
-
         internal void DeleteExistingData()
         {
             DeleteExistingMovToDir();
             DeleteExistingMovies();
             DeleteExistingDirectors();
         }
-
-
-        public void InsertMovie(string id, string t, string o, string o_t, string r_d)
+        internal void InsertMovie(string id, string t, string o, string o_t, string r_d)
         {
             var myCommandString = "INSERT INTO Movies (movie_id, title, overview, original_title, release_date) VALUES (@id, @title, @overview, @original_title, @release_date)";
 
@@ -117,8 +109,6 @@ namespace ConsoleApp2
                 myConnection.Close();  
             }
         }
-
-
         internal void InsertDirector(string directorId, string name, string imdbId)
         {
             var myCommandString = "IF NOT EXISTS (SELECT * FROM Directors WHERE director_id = @id ) INSERT INTO Directors (director_id, name, imdb_id) VALUES (@id, @name, @imdb)";
@@ -144,7 +134,6 @@ namespace ConsoleApp2
                 }
             }
         }
-
         internal void InsertDirectorToMovie(string movieId, string directorId)
         {
             var myCommandString = "INSERT INTO movies_directors (movie_id, director_id) VALUES (@movie_id, @director_id)";
