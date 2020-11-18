@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Data;
 using System.Data.SqlClient;
-using System.Globalization;
 using System.IO;
 
 namespace ConsoleApp2
@@ -39,6 +33,8 @@ namespace ConsoleApp2
             }
         }
 
+        
+
         public static Manager Instance
         {
             get
@@ -58,9 +54,54 @@ namespace ConsoleApp2
 
         private static string connectionString = "Data Source = localhost; Initial Catalog = TMDBdb; Integrated Security = True";
 
-        public bool InsertMovie(string id, string t, string o, string o_t, string r_d)
+        internal void DeleteExistingMovies()
         {
-            bool success = false;
+            var myCommandString = "DELETE FROM Movies";
+
+            using (var myConnection = new SqlConnection(connectionString))
+            using (var command = new SqlCommand(myCommandString, myConnection))
+            {
+                myConnection.Open();
+                command.ExecuteNonQuery();
+                myConnection.Close();
+            }
+        }
+        internal void DeleteExistingDirectors()
+        {
+            var myCommandString = "DELETE FROM Directors";
+
+            using (var myConnection = new SqlConnection(connectionString))
+            using (var command = new SqlCommand(myCommandString, myConnection))
+            {
+                myConnection.Open();
+                command.ExecuteNonQuery();
+                myConnection.Close();
+            }
+        }
+
+        internal void DeleteExistingMovToDir()
+        {
+            var myCommandString = "DELETE FROM Movies_Directors";
+
+            using (var myConnection = new SqlConnection(connectionString))
+            using (var command = new SqlCommand(myCommandString, myConnection))
+            {
+                myConnection.Open();
+                command.ExecuteNonQuery();
+                myConnection.Close();
+            }
+        }
+
+        internal void DeleteExistingData()
+        {
+            DeleteExistingMovToDir();
+            DeleteExistingMovies();
+            DeleteExistingDirectors();
+        }
+
+
+        public void InsertMovie(string id, string t, string o, string o_t, string r_d)
+        {
             var myCommandString = "INSERT INTO Movies (movie_id, title, overview, original_title, release_date) VALUES (@id, @title, @overview, @original_title, @release_date)";
 
             using (var myConnection = new SqlConnection(connectionString))
@@ -71,28 +112,15 @@ namespace ConsoleApp2
                 command.Parameters.AddWithValue("@overview", o);
                 command.Parameters.AddWithValue("@original_title", o_t);
                 command.Parameters.AddWithValue("@release_date", r_d);
-                try
-                {
-                    myConnection.Open();
-                    command.ExecuteNonQuery();
-                    myConnection.Close();
-                    success = true;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error inserting to movies table.");
-                    Console.WriteLine("Movie title: " + t + ". Movie id: " + id);
-                    Console.WriteLine(e.Message);
-                    Console.WriteLine("Debug.");
-                }
+                myConnection.Open();
+                command.ExecuteNonQuery();
+                myConnection.Close();  
             }
-            return success;
         }
 
 
-        internal bool InsertDirector(string directorId, string name, string imdbId)
+        internal void InsertDirector(string directorId, string name, string imdbId)
         {
-            bool success = false;
             var myCommandString = "IF NOT EXISTS (SELECT * FROM Directors WHERE director_id = @id ) INSERT INTO Directors (director_id, name, imdb_id) VALUES (@id, @name, @imdb)";
 
             using (var myConnection = new SqlConnection(connectionString))
@@ -106,7 +134,6 @@ namespace ConsoleApp2
                     myConnection.Open();
                     command.ExecuteNonQuery();
                     myConnection.Close();
-                    success = true;
                 }
                 catch (Exception e)
                 {
@@ -116,12 +143,10 @@ namespace ConsoleApp2
                     Console.WriteLine("Debug.");
                 }
             }
-            return success;
         }
 
-        internal bool InsertDirectorToMovie(string movieId, string directorId)
+        internal void InsertDirectorToMovie(string movieId, string directorId)
         {
-            bool success = false;
             var myCommandString = "INSERT INTO movies_directors (movie_id, director_id) VALUES (@movie_id, @director_id)";
 
             using (var myConnection = new SqlConnection(connectionString))
@@ -134,7 +159,6 @@ namespace ConsoleApp2
                     myConnection.Open();
                     command.ExecuteNonQuery();
                     myConnection.Close();
-                    success = true;
                 }
                 catch (Exception e)
                 {
@@ -144,7 +168,6 @@ namespace ConsoleApp2
                     Console.WriteLine("Debug.");
                 }
             }
-            return success;
         }
     }
 }
