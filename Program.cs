@@ -12,94 +12,95 @@ namespace ConsoleApp2
 {
     public class Movie
     {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Overview { get; set; }
-        public string Original_title { get; set; }
-        public string Release_date { get; set; }
-    }
-
-    public class Data
-    {
-        public string Results { get; set; }
-    }
-
-
-    class Program
-    {
-        static HttpClient client = new HttpClient();
-
-        static async Task<Data> GetMovieAsync(string path)
+        class Program
         {
-            Data data = null;
-            HttpResponseMessage response = await client.GetAsync(path);
-            if (response.IsSuccessStatusCode)
+            static HttpClient client = new HttpClient();
+
+            static void Main()
             {
-                data = await response.Content.ReadAsAsync<Data>();
+                RunAsync().GetAwaiter().GetResult();
             }
-            return data;
-        }
 
-        static async void GetRecentMoviesAsync(string path)
-        {
-            HttpResponseMessage response = await client.GetAsync(path);
-            if (response.IsSuccessStatusCode)
+            static async Task RunAsync()
             {
-                string responseBody = await response.Content.ReadAsStringAsync();
-                JavaScriptSerializer js = new JavaScriptSerializer();
-                dynamic d = js.Deserialize<dynamic>(responseBody);
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                long page = d["page"];
-                long total_results = d["total_results"];
-                long total_pages = d["total_pages"];
-                foreach (var member in d["results"])
+                string date_start = DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd");
+                string include_video = "false";
+                string include_adult = "false";
+                string action = "/discover/movie";
+                string api_version = "3";
+                string api_base_url = $"https://api.themoviedb.org/{api_version}";
+                string api_key = "26b0924beb1a602a494bf23da021b807";
+                string language_code = "en-US";
+
+                //API call to get all movies released over the past 2 weeks
+                string discover_API_call = $"{api_base_url}{action}?api_key={api_key}&language={language_code}&include_adult={include_adult}&include_video={include_video}&release_date.gte={date_start}";
+                int pageNo = 1;
+                int totalPages = 0;
+                dynamic data = null;
+                string getCredits_API_call = "";
+                do
                 {
-                    Manager.Instance.InsertMovie(member["title"], member["overview"], member["original_title"], member["release_date"]);
-                }
-                for (int i = 2; i <= total_pages; i++)
-                {
-                    response = await client.GetAsync($"{path}&page={i}");
-                    responseBody = await response.Content.ReadAsStringAsync();
-                    d = js.Deserialize<dynamic>(responseBody);
-                    foreach (var member in d["results"])
-                    {                        
-                        Manager.Instance.InsertMovie(member["title"], member["overview"], member["original_title"], member["release_date"]);
+                    try
+                    {
+                        data = await GetRequestAsync($"{discover_API_call}&page={pageNo}");
                     }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    try
+                    {
+                        foreach (var member in data["results"])
+                        {
+                            string movieId = member["id"].ToString();
+                            Manager.Instance.InsertMovie(movieId, member["title"], member["overview"], member["original_title"], member["release_date"]);
+                            //Make another API call here for crew members, from movie id
+                            action = "/movie/";
+                            getCredits_API_call = $"{ api_base_url }{ action }{ movieId }?api_key={api_key}&language={language_code}";
+                            dynamic creditsDataset = await GetRequestAsync(getCredits_API_call);
+                            foreach (var memeber in creditsDataset["crew"])
+                            {
+                                if (member["job"] == "Director")
+                                {
+                                    //Call get external id api to get imdb_id of director
+
+
+                                    //Insert director id, name, imdb_id in directors
+                                    //Insert director_id - movie_id in movies_directors
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    totalPages = Convert.ToInt32(data["total_pages"]);
+                    pageNo++;
+                } while (pageNo < totalPages);
+
+
+
+            }
+
+            static async Task<dynamic> GetRequestAsync(string path)
+            {
+                dynamic d = null;
+                HttpResponseMessage response = await client.GetAsync(path);
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    JavaScriptSerializer js = new JavaScriptSerializer();
+                    d = js.Deserialize<dynamic>(responseBody);
+                    return d;
                 }
-            }
-        }
-
-        static void Main()
-        {
-            RunAsync().GetAwaiter().GetResult();
-        }
-
-        static async Task RunAsync()
-        {
-            string two_weeks_ago = DateTime.Today.AddDays(-14).ToString("yyyy-MM-dd");
-            string include_video = "false";
-            string include_adult = "false";
-            string action = "/discover/movie";
-            string api_version = "3";
-            string api_base_url = $"https://api.themoviedb.org/{api_version}";
-            string api_key = "26b0924beb1a602a494bf23da021b807";
-            string language_code = "en-US";
-            string endpoint_path = $"{action}?api_key={api_key}&language={language_code}&include_adult={include_adult}&include_video={include_video}&release_date.gte={two_weeks_ago}";
-
-            //API call to get all movies released over the past 2 weeks
-            string discover_API_call = $"{api_base_url}{endpoint_path}";
-            string endpoint = discover_API_call;
-
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            try
-            {
-                
-                GetRecentMoviesAsync(endpoint);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
+                else
+                {
+                    return d;
+                }
             }
         }
     }

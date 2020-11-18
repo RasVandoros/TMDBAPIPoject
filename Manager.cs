@@ -35,6 +35,7 @@ namespace ConsoleApp2
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.Message);
             }
         }
 
@@ -47,35 +48,28 @@ namespace ConsoleApp2
                     if (instance == null)
                     {
                         instance = new Manager();
-
                     }
                 }
                 return instance;
             }
-
-
         }
 
         #endregion
 
 
-        public void InsertMovie(string t, string o, string o_t, string r_d)
+        public void InsertMovie(string id, string t, string o, string o_t, string r_d)
         {
             string connectionString = "Data Source = localhost; Initial Catalog = TMDBdb; Integrated Security = True";
-            var myCommandString = "INSERT INTO Movies (title, overview, original_title, release_date) VALUES (@title, @overview, @original_title, @release_date)";
+            var myCommandString = "INSERT INTO Movies (movie_id, title, overview, original_title, release_date) VALUES (@id, @title, @overview, @original_title, @release_date)";
 
             using (var myConnection = new SqlConnection(connectionString))
             using (var command = new SqlCommand(myCommandString, myConnection))
             {
-                SqlParameter title = new SqlParameter();
-                SqlParameter overview = new SqlParameter();
-                SqlParameter original_title = new SqlParameter();
-                SqlParameter release_date = new SqlParameter();
+                command.Parameters.AddWithValue("@id", id);
                 command.Parameters.AddWithValue("@title", t);
                 command.Parameters.AddWithValue("@overview", o);
                 command.Parameters.AddWithValue("@original_title", o_t);
                 command.Parameters.AddWithValue("@release_date", r_d);
-
                 try
                 {
                     myConnection.Open();
@@ -84,7 +78,7 @@ namespace ConsoleApp2
                 }
                 catch (Exception e)
                 {
-                    
+                    Console.WriteLine(e.Message);
                 }
             }
         }
